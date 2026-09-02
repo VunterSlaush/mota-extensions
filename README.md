@@ -22,7 +22,6 @@ sidebar.
 | Extension | What it does | Adds | Permissions |
 |---|---|---|---|
 | [GitHub PRs](extensions/github-prs) | Your open pull requests in the sidebar, grouped by what needs you: CI failing, changes requested, running, ready to merge. Click one for the failing checks. *(setup required)* | a sidebar panel | `ui:panel` |
-| [Linear](extensions/linear) | Your assigned Linear issues in the sidebar: grouped by status, change status inline, click one for details. *(setup required)* | a sidebar panel | `ui:panel` |
 | [Standup](extensions/standup) | Drafts a standup update and pings you when it is ready. | `/standup`, `/standup-notify` | `commands:register` `notifications` |
 
 <!-- catalog:end -->
@@ -92,7 +91,8 @@ in the Mota repository: the manifest, the permission vocabulary, the wire
 protocol, and the declarative panel model.
 [`extensions/standup`](extensions/standup) is the shortest complete
 example (50 lines of plain Node);
-[`extensions/linear`](extensions/linear) is the worked example for panels.
+[`extensions/github-prs`](extensions/github-prs) is the worked example for
+panels — groups, badges, right-click menus and detail modals.
 
 ## What is in here
 

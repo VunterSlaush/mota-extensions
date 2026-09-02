@@ -18,21 +18,6 @@
       "source": { "kind": "path", "path": "extensions/github-prs" }
     },
     {
-      "id": "linear",
-      "displayName": "Linear",
-      "description": "Your assigned Linear issues in the sidebar: grouped by status, change status inline, click one for details.",
-      "version": "0.1.0",
-      "author": { "name": "Jesus Mota", "github": "VunterSlaush" },
-      "license": "MIT",
-      "keywords": ["issues", "tasks", "linear", "panel"],
-      "permissions": ["ui:panel"],
-      "commands": [],
-      "panels": ["tasks"],
-      "runtime": "node",
-      "setup": "Sign in from the panel (one click, OAuth), or set LINEAR_API_KEY in your environment.",
-      "source": { "kind": "path", "path": "extensions/linear" }
-    },
-    {
       "id": "standup",
       "displayName": "Standup",
       "description": "Drafts a standup update and pings you when it is ready.",
