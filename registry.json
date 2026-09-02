@@ -3,6 +3,21 @@
   "version": 1,
   "extensions": [
     {
+      "id": "github-prs",
+      "displayName": "GitHub PRs",
+      "description": "Your open pull requests in the sidebar, grouped by what needs you: CI failing, changes requested, running, ready to merge. Click one for the failing checks.",
+      "version": "0.1.0",
+      "author": { "name": "Jesus Mota", "github": "VunterSlaush" },
+      "license": "MIT",
+      "keywords": ["github", "pull-requests", "ci", "panel"],
+      "permissions": ["ui:panel"],
+      "commands": [],
+      "panels": ["prs"],
+      "runtime": "node",
+      "setup": "Nothing if the gh CLI is installed and logged in; otherwise set GITHUB_TOKEN or put a token in the extension's config.json.",
+      "source": { "kind": "path", "path": "extensions/github-prs" }
+    },
+    {
       "id": "linear",
       "displayName": "Linear",
       "description": "Your assigned Linear issues in the sidebar: grouped by status, change status inline, click one for details.",

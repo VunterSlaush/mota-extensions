@@ -21,6 +21,7 @@ sidebar.
 
 | Extension | What it does | Adds | Permissions |
 |---|---|---|---|
+| [GitHub PRs](extensions/github-prs) | Your open pull requests in the sidebar, grouped by what needs you: CI failing, changes requested, running, ready to merge. Click one for the failing checks. *(setup required)* | a sidebar panel | `ui:panel` |
 | [Linear](extensions/linear) | Your assigned Linear issues in the sidebar: grouped by status, change status inline, click one for details. *(setup required)* | a sidebar panel | `ui:panel` |
 | [Standup](extensions/standup) | Drafts a standup update and pings you when it is ready. | `/standup`, `/standup-notify` | `commands:register` `notifications` |
 
@@ -30,8 +31,13 @@ Machine-readable: [`registry.json`](registry.json).
 
 ## Installing one
 
-Mota installs an extension by reading a folder — so installing is copying
-a folder and clicking Approve.
+The short way: type **`/install-extension`** in any Mota chat to see this
+catalog in the app, or `/install-extension github-prs` to install one.
+The command is built into every install; it fetches the folder, shows you
+the permissions the manifest declares, and asks before copying anything.
+
+By hand is the same thing — Mota installs an extension by reading a
+folder, so installing is copying a folder and clicking Approve.
 
 ```bash
 git clone --depth 1 https://github.com/VunterSlaush/mota-extensions.git

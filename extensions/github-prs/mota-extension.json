@@ -1,0 +1,12 @@
+{
+  "name": "github-prs",
+  "version": "0.1.0",
+  "displayName": "GitHub PRs",
+  "description": "Your open pull requests in the sidebar, grouped by what needs you: CI failing, changes requested, running, ready to merge. Click one for the failing checks.",
+  "protocolVersion": 1,
+  "entry": { "command": "node", "args": ["./main.cjs"] },
+  "permissions": ["ui:panel"],
+  "contributes": {
+    "panels": [{ "id": "prs", "title": "Pull Requests", "icon": "rocket" }]
+  }
+}
