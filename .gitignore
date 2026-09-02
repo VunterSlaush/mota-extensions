@@ -1,0 +1,6 @@
+# Nothing here is built or installed — an extension in this store is the
+# source that runs. These are only ever local accidents.
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

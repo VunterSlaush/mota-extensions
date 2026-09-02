@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The index, every hosted manifest, and the README catalog. No
+      # install step: the scripts have no dependencies, on purpose.
+      - run: node scripts/validate.mjs
+
+      # Every hosted extension's script must at least parse under Node —
+      # a syntax error should never reach somebody's machine.
+      - name: Parse hosted scripts
+        run: |
+          shopt -s nullglob
+          for file in extensions/*/*.js extensions/*/*.cjs extensions/*/*.mjs; do
+            echo "checking $file"
+            node --check "$file"
+          done

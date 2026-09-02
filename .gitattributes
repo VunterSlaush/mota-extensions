@@ -1,0 +1,4 @@
+# Normalise line endings: LF in the repository, on every platform.
+# Extensions are copied straight out of here onto contributors' machines,
+# and a CRLF shebang line is a broken script on Linux and macOS.
+* text=auto eol=lf

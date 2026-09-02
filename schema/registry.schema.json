@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/VunterSlaush/mota-extensions/main/schema/registry.schema.json",
+  "title": "Mota extension registry",
+  "description": "The index Mota Editor reads to browse and install extensions. scripts/validate.mjs enforces this and more (it also cross-checks every entry against the extension's own mota-extension.json).",
+  "type": "object",
+  "required": ["version", "extensions"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "const": 1,
+      "description": "Registry format version. Bumped only for a breaking change; readers must ignore unknown fields so the format can grow additively."
+    },
+    "extensions": {
+      "type": "array",
+      "description": "Sorted by id, one entry per extension.",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "displayName", "description", "version", "author", "permissions", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{2,64}$",
+          "description": "The extension id — equals the manifest name and the folder it installs into."
+        },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "One line, shown in the browse list. Say what it does, not that it is awesome."
+        },
+        "version": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "author": {
+          "type": "object",
+          "required": ["name"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "github": { "type": "string", "minLength": 1 },
+            "url": { "type": "string", "format": "uri" }
+          }
+        },
+        "license": { "type": "string", "description": "SPDX identifier, e.g. MIT." },
+        "homepage": { "type": "string", "format": "uri" },
+        "keywords": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "type": "string", "pattern": "^[a-z0-9-]{2,24}$" }
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Copied from the manifest so the list can be browsed and filtered. Advisory only — Mota re-reads the real manifest at install time and asks for consent from that.",
+          "items": {
+            "enum": [
+              "commands:register",
+              "tools:register",
+              "events:subscribe",
+              "notifications",
+              "transcripts:read",
+              "agent:prompt",
+              "fs:project-read",
+              "ui:panel",
+              "ui:theme",
+              "shell:exec",
+              "provider:register"
+            ]
+          }
+        },
+        "commands": {
+          "type": "array",
+          "description": "Slash command names contributed, without the leading slash.",
+          "items": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" }
+        },
+        "panels": {
+          "type": "array",
+          "description": "Sidebar panel ids contributed.",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "runtime": {
+          "description": "What has to be on PATH to run it. \"none\" means pure data — no process at all.",
+          "enum": ["none", "node", "python", "deno", "bun", "other"]
+        },
+        "setup": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Anything the user must do after installing — an API key, a sign-in. Omit when there is nothing."
+        },
+        "source": {
+          "oneOf": [{ "$ref": "#/$defs/pathSource" }, { "$ref": "#/$defs/gitSource" }]
+        }
+      }
+    },
+    "pathSource": {
+      "type": "object",
+      "description": "Hosted in this repository: the folder is reviewed as a diff and installed by copying it.",
+      "required": ["kind", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "path" },
+        "path": { "type": "string", "pattern": "^extensions/[a-z0-9-]{2,64}$" }
+      }
+    },
+    "gitSource": {
+      "type": "object",
+      "description": "Hosted in the author's own repository: installed by a shallow clone. The repository root must be the extension folder (mota-extension.json at the top).",
+      "required": ["kind", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "git" },
+        "url": { "type": "string", "pattern": "^https://[^\\s]+$" },
+        "ref": { "type": "string", "minLength": 1, "description": "Branch or tag. Defaults to the repository's default branch." }
+      }
+    }
+  }
+}
