@@ -7,6 +7,6 @@
   "entry": { "command": "node", "args": ["./main.cjs"] },
   "permissions": ["ui:panel"],
   "contributes": {
-    "panels": [{ "id": "savings", "title": "Token Saver", "icon": "rocket" }]
+    "panels": [{ "id": "savings", "title": "Token Saver", "icon": "coins" }]
   }
 }
