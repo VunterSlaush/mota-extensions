@@ -18,6 +18,21 @@
       "source": { "kind": "path", "path": "extensions/github-prs" }
     },
     {
+      "id": "rtk",
+      "displayName": "Token Saver (rtk)",
+      "description": "Compresses the shell output your Claude sessions read with rtk, and shows how many tokens it saved.",
+      "version": "0.1.0",
+      "author": { "name": "Jesus Mota", "github": "VunterSlaush" },
+      "license": "MIT",
+      "keywords": ["tokens", "claude", "shell", "savings", "panel"],
+      "permissions": ["ui:panel"],
+      "commands": [],
+      "panels": ["savings"],
+      "runtime": "node",
+      "setup": "Nothing. Press Enable in the panel; it installs rtk with winget/brew if needed and turns the Claude hook on. Restart Mota once after a fresh install.",
+      "source": { "kind": "path", "path": "extensions/rtk" }
+    },
+    {
       "id": "standup",
       "displayName": "Standup",
       "description": "Drafts a standup update and pings you when it is ready.",
