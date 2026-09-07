@@ -18,6 +18,31 @@
       "source": { "kind": "path", "path": "extensions/github-prs" }
     },
     {
+      "id": "poteto-mode",
+      "displayName": "Poteto Mode",
+      "description": "Rigorous agent mode adapted from Cursor's pstack: /poteto-mode matches a playbook, builds a todo list, delegates by model tier, and demands evidence before reporting done.",
+      "version": "0.1.0",
+      "author": { "name": "Jesus Mota", "github": "VunterSlaush" },
+      "license": "MIT",
+      "keywords": ["agent", "workflow", "rigor", "playbooks", "prompts", "pstack"],
+      "permissions": ["commands:register"],
+      "commands": [
+        "poteto-mode",
+        "how",
+        "why",
+        "architect",
+        "arena",
+        "interrogate",
+        "tdd",
+        "figure-it-out",
+        "show-me-your-work",
+        "unslop"
+      ],
+      "panels": [],
+      "runtime": "none",
+      "source": { "kind": "path", "path": "extensions/poteto-mode" }
+    },
+    {
       "id": "rtk",
       "displayName": "Token Saver (rtk)",
       "description": "Compresses the shell output your Claude sessions read with rtk, and shows how many tokens it saved.",
