@@ -170,15 +170,17 @@ async function buildView(context, { useCache }) {
 }
 
 async function handleAction(params) {
-  const { action, itemId: id } = params;
+  const { action, itemId: id, value } = params;
   const context = contextOf(params);
   if (action === "button") {
     if (id === "enable" || id === "disable") return { view: await startJob(id, context) };
     return {};
   }
-  if (action === "open") {
+  // A menu entry names the detail it opens, so both actions end in the
+  // same place: the row a user clicked, or the one they asked for.
+  if (action === "open" || action === "menu") {
     if (!lastModel) await buildView(context, { useCache: true });
-    const detail = detailOf(id, lastModel);
+    const detail = detailOf(action === "menu" ? value : id, lastModel);
     return detail ? { detail } : {};
   }
   return {};
@@ -491,7 +493,7 @@ const STATUS = {
 
 function renderView(model) {
   const { detection, savings } = model;
-  const groups = [{ title: "Status", items: [statusItem(detection), configItem(detection), ripgrepItem(detection)] }];
+  const groups = [{ title: "Status", items: [statusItem(detection)] }];
   if (savings) groups.push(...savingsGroups(savings));
   return {
     groups,
@@ -499,6 +501,15 @@ function renderView(model) {
     emptyText: emptyTextFor(detection),
   };
 }
+
+/** The whole of Status is this one row: the panel is here for the
+ *  savings, and a working setup has nothing to say. rtk's config and
+ *  ripgrep used to be rows of their own — they are the right-click menu
+ *  now, and every path and knob is still in the row's own detail. */
+const STATUS_MENU = [
+  { id: "config", label: "rtk config…" },
+  { id: "ripgrep", label: "ripgrep…" },
+];
 
 function statusItem(detection) {
   const state = detection.state;
@@ -520,54 +531,33 @@ function statusItem(detection) {
       lastError && state !== "active" ? `Last attempt failed: ${firstLine(lastError)}` : subtitleFor(detection),
     badge: status.badge,
     badgeTone: status.tone,
+    menu: STATUS_MENU,
   };
 }
 
-/** Setup already ran by itself when these show (or could not), so the
- *  words point at the retry, not at a first step. */
+/** One short clause, and only when the user has something to do about
+ *  it — a second line is the cost of saying anything here. Setup already
+ *  ran by itself (or could not), so the words point at the retry, not at
+ *  a first step; the reasons live in the detail behind the row. */
 function subtitleFor(detection) {
   switch (detection.state) {
     case "active":
-      return SCOPE_NOTE;
+      return detection.ripgrep ? "" : "ripgrep is not on PATH — rtk works without it.";
     case "installedNoHook":
-      return "Press Enable to add the Claude hook. " + SCOPE_NOTE;
+      return "Press Enable to add the Claude hook.";
     case "needsRestart":
       return detection.hook.present
-        ? "rtk is installed and hooked up, but Mota's PATH predates it. Restart Mota so Claude can find rtk."
-        : "rtk is installed but Mota's PATH predates it. Press Enable to add the hook, then restart Mota.";
+        ? "Restart Mota so Claude can find rtk."
+        : "Press Enable to add the hook, then restart Mota.";
     case "hookBroken":
-      return "Claude's settings run rtk on every shell command, but rtk cannot be found. Shell commands still run, uncompressed. Press Enable to reinstall it, or remove the entry from settings.json by hand.";
+      return "Commands still run, uncompressed. Press Enable to reinstall rtk.";
     case "notInstalled":
-      return `Press Enable to install it with ${detection.packageManager.name} and turn it on for Claude.`;
+      return `Press Enable to install it with ${detection.packageManager.name}.`;
     case "noPackageManager":
       return "No winget, scoop or brew here. Click for the manual install line.";
     default:
       return "";
   }
-}
-
-function configItem(detection) {
-  return {
-    id: "config",
-    title: "rtk config",
-    subtitle: detection.configPresent
-      ? "Click to see it. Exclusions and other knobs live here."
-      : "Created on setup with commented defaults.",
-    badge: detection.configPresent ? "Present" : "Missing",
-    badgeTone: detection.configPresent ? "success" : "neutral",
-  };
-}
-
-function ripgrepItem(detection) {
-  return {
-    id: "ripgrep",
-    title: "ripgrep",
-    subtitle: detection.ripgrep
-      ? "Found. rtk's grep and find filters use it."
-      : "Not on Mota's PATH. Installed on setup where a package manager exists; rtk works without it.",
-    badge: detection.ripgrep ? "Found" : "Missing",
-    badgeTone: detection.ripgrep ? "success" : "neutral",
-  };
 }
 
 function emptyTextFor(detection) {

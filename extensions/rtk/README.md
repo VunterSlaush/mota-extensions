@@ -10,12 +10,11 @@ load that file, so once the hook is there it fires inside Mota.
 This extension sets all of that up by itself the first time you open its
 panel, and shows what it saved:
 
-- **Status** — whether rtk is installed, whether the Claude hook is set,
-  and what to do next. Click the row for paths, the manual commands, and
-  a link to rtk's releases.
-- **rtk config** — whether rtk's `config.toml` exists. Click it to read
-  the file; that is where you list commands rtk must leave alone.
-- **ripgrep** — whether `rg` is on PATH (some rtk filters use it).
+- **Status** — one line: whether rtk is on, and what to do about it when
+  it is not. Click it for the paths, the Claude hook, whether ripgrep was
+  found, the manual commands, and a link to rtk's releases. Right-click
+  it for **rtk config…** — which reads the file, and is where you list
+  commands rtk must leave alone — and **ripgrep…**.
 - **Savings (all projects)** — tokens saved, commands compressed, and the
   average reduction, from rtk's own history.
 - **This project** — the same three numbers for the folder open in Mota.
@@ -83,7 +82,7 @@ permission model covers what an extension asks the *host* to do.
 - **Files written:** rtk's `config.toml` (`%APPDATA%\rtk\config.toml` /
   `~/Library/Application Support/rtk/config.toml` /
   `~/.config/rtk/config.toml`), and only when it does not exist — the
-  contents are in the panel's config row. rtk itself writes
+  contents are behind the status row's **rtk config…**. rtk itself writes
   `~/.claude/settings.json` (backing it up to `settings.json.bak` first)
   and keeps its history in `%LOCALAPPDATA%\rtk\history.db` /
   `~/.local/share/rtk/history.db`.
@@ -101,7 +100,8 @@ permission model covers what an extension asks the *host* to do.
   Windows ARM64 build.
 - [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) is optional —
   some rtk filters shell out to it. Setup installs it where it can; the
-  panel's ripgrep row says whether it was found.
+  status row says whether it was found — in its detail, and on the row
+  itself when rtk is otherwise on.
 
 ## Reading the numbers
 
@@ -114,8 +114,9 @@ input tokens are one part of the bill.
 
 - Prefix a single command with `RTK_DISABLED=1` to run it unfiltered.
 - Add commands rtk must leave alone to `[hooks] exclude_commands` in
-  rtk's `config.toml` — the panel's config row shows the file and its
-  path, and the file setup writes has the line ready to fill in.
+  rtk's `config.toml` — right-click the status row and pick **rtk
+  config…** to see the file and its path, and the file setup writes has
+  the line ready to fill in.
 - **Disable** in the panel removes the hook entirely.
 
 If the hook is set but rtk cannot be found (uninstalled, or moved), the

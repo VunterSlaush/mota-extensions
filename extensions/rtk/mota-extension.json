@@ -1,6 +1,6 @@
 {
   "name": "rtk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "displayName": "Token Saver (rtk)",
   "description": "Sets up rtk for your Claude sessions on first open — install, hook, config — and shows how many tokens it saved.",
   "protocolVersion": 1,
