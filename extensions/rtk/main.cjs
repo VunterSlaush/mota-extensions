@@ -1,14 +1,18 @@
 // Token Saver (rtk) for Mota Editor — turns rtk on for your Claude
-// sessions with one button and shows how many tokens it has saved.
-// Plain Node (18+), no dependencies: one JSON object per stdin line in,
-// one per stdout line out (MXP, docs/EXTENSIONS.md in mota-editor).
+// sessions the first time the panel opens and shows how many tokens it
+// has saved. Plain Node (18+), no dependencies: one JSON object per
+// stdin line in, one per stdout line out (MXP, docs/EXTENSIONS.md in
+// mota-editor).
 //
 // rtk (https://github.com/rtk-ai/rtk) is a Claude Code PreToolUse hook
 // that rewrites shell commands so their output is compressed before the
 // model reads it. Mota's Claude sessions load ~/.claude/settings.json,
 // so once the hook is there it fires inside Mota with no host change.
-// This extension only ever runs rtk and the package manager; the file
-// rtk writes is settings.json, and rtk keeps its own history database.
+//
+// Setup is everything rtk needs, done once and unattended: rtk itself
+// (package manager), the Claude hook (rtk init), a commented config.toml
+// when none exists (the one file this extension writes, never over an
+// existing one), and ripgrep, which some rtk filters shell out to.
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -30,6 +34,40 @@ const DAYS_SHOWN = 7;
 const IS_WINDOWS = process.platform === "win32";
 const IS_MAC = process.platform === "darwin";
 const RTK_EXE = IS_WINDOWS ? "rtk.exe" : "rtk";
+const CONFIG_REFERENCE_URL = "https://www.rtk-ai.app/guide/getting-started/configuration";
+
+/** Written only when rtk has no config yet. A section rtk does not find
+ *  takes its defaults, but a section it does find must be complete —
+ *  `[tee]` in particular names every field — so this stays a copy of
+ *  rtk's own defaults (v0.48) with the knobs a Mota user is likely to
+ *  reach for explained where they will look for them. */
+const DEFAULT_CONFIG_TOML = `# rtk configuration — created by Mota's Token Saver extension because none existed.
+# rtk reads this file on every command. Edit freely; nothing overwrites it.
+# Reference: ${CONFIG_REFERENCE_URL}
+
+[hooks]
+# Commands the Claude hook must never rewrite, e.g. ["git push", "curl", "playwright"].
+# Plain entries match by prefix; an entry starting with "^" is a regex.
+exclude_commands = []
+# Wrappers to look through before matching, e.g. ["docker exec app", "direnv exec ."].
+transparent_prefixes = []
+
+[tee]
+# Keep the full raw output on disk when a filtered command fails, so Claude can read it.
+# mode: "failures", "always", or "never". Every field below is required by rtk.
+enabled = true
+mode = "failures"
+max_files = 20
+max_file_size = 1048576
+
+[awareness]
+# "default": Claude only learns how to read condensed output. "high": it also learns
+# what rtk is and how to bypass it. "full": it is told to prefix commands with rtk itself.
+level = "default"
+
+[telemetry]
+enabled = false
+`;
 
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
@@ -47,6 +85,10 @@ let outgoingId = 1_000_000;
 let job = null;
 /** Last ERROR_TAIL_LINES lines of the last failed job, for the status row. */
 let lastError = "";
+/** Setup runs by itself the first time the panel loads and finds work to
+ *  do — once per process, so a failure is shown, not retried in a loop.
+ *  The Enable button stays for running it again by hand. */
+let autoSetupTried = false;
 /** projectPath → savings, so opening a detail re-renders instead of
  *  spawning rtk twice more. Cleared whenever rtk's state changes. */
 const savingsCache = new Map();
@@ -116,6 +158,10 @@ function contextOf(params) {
 
 async function buildView(context, { useCache }) {
   const detection = await detect();
+  if (!job && !autoSetupTried && setupWouldHelp(detection)) {
+    autoSetupTried = true;
+    return startJob("enable", context, detection);
+  }
   const savings = detection.rtkPath
     ? await loadSavings(detection.rtkPath, context.projectPath, useCache)
     : null;
@@ -175,9 +221,10 @@ async function detect() {
     }
   }
   const hook = readHook();
-  // Only worth a spawn when there is something to install.
-  const packageManager = rtkPath ? null : await findPackageManager();
   const ripgrep = (await run("rg", ["--version"], { timeoutMs: VERSION_TIMEOUT_MS })).code === 0;
+  // Only worth a spawn when there is something to install.
+  const packageManager = rtkPath && ripgrep ? null : await findPackageManager();
+  const configPath = rtkConfigPath();
   return {
     state: stateOf({ rtkPath, staleEnvironment, hook }, packageManager),
     rtkPath,
@@ -186,7 +233,19 @@ async function detect() {
     hook,
     packageManager,
     ripgrep,
+    configPath,
+    configPresent: fs.existsSync(configPath),
   };
+}
+
+/** Whether setup has anything left to do here: what an Enable press would
+ *  fix, or — for an rtk that is already on — a missing config or ripgrep.
+ *  This is the test that runs setup unasked when the panel opens. */
+function setupWouldHelp(detection) {
+  if (buttonsFor(detection).some((button) => button.id === "enable")) return true;
+  if (!detection.rtkPath) return false;
+  const pm = detection.packageManager;
+  return !detection.configPresent || (!detection.ripgrep && Boolean(pm && pm.ripgrepArgs));
 }
 
 function stateOf({ rtkPath, staleEnvironment, hook }, packageManager) {
@@ -305,11 +364,14 @@ async function findPackageManager() {
     // see, so it is probed the only way that is reliable: by running it.
     const winget = await run("winget", ["--version"], { timeoutMs: VERSION_TIMEOUT_MS });
     if (winget.code === 0) {
+      const flags = ["-e", "--accept-source-agreements", "--accept-package-agreements", "--disable-interactivity"];
       return {
         name: "winget",
         command: "winget",
-        args: ["install", "--id", "rtk-ai.rtk", "-e", "--accept-source-agreements", "--accept-package-agreements", "--disable-interactivity"],
+        args: ["install", "--id", "rtk-ai.rtk", ...flags],
         display: "winget install --id rtk-ai.rtk -e",
+        ripgrepArgs: ["install", "--id", "BurntSushi.ripgrep.MSVC", ...flags],
+        ripgrepDisplay: "winget install --id BurntSushi.ripgrep.MSVC -e",
       };
     }
     // scoop is a .cmd shim; Node will not run one without a shell, so
@@ -322,13 +384,24 @@ async function findPackageManager() {
         command: process.env.ComSpec || "cmd.exe",
         args: ["/d", "/c", scoop, "install", "rtk"],
         display: "scoop install rtk",
+        ripgrepArgs: ["/d", "/c", scoop, "install", "ripgrep"],
+        ripgrepDisplay: "scoop install ripgrep",
       };
     }
     return null;
   }
   if (IS_MAC) {
     const brew = findOnPath("brew") || existing("/opt/homebrew/bin/brew") || existing("/usr/local/bin/brew");
-    if (brew) return { name: "brew", command: brew, args: ["install", "rtk"], display: "brew install rtk" };
+    if (brew) {
+      return {
+        name: "brew",
+        command: brew,
+        args: ["install", "rtk"],
+        display: "brew install rtk",
+        ripgrepArgs: ["install", "ripgrep"],
+        ripgrepDisplay: "brew install ripgrep",
+      };
+    }
   }
   return null;
 }
@@ -399,6 +472,14 @@ function count(value) {
 
 // ---- Shaping the view model ----
 
+/** What the status row says while a job runs, by phase. */
+const JOB_PHASES = {
+  install: { title: "Installing rtk…", subtitle: "", badge: "Installing…" },
+  configure: { title: "Turning the hook on…", subtitle: "Editing ~/.claude/settings.json.", badge: "Configuring…" },
+  extras: { title: "Finishing setup…", subtitle: "Writing rtk's config and installing ripgrep.", badge: "Configuring…" },
+  remove: { title: "Turning the hook off…", subtitle: "Editing ~/.claude/settings.json.", badge: "Configuring…" },
+};
+
 const STATUS = {
   active: { title: "rtk is on", badge: "Active", tone: "success" },
   notInstalled: { title: "rtk is not installed", badge: "Not installed", tone: "neutral" },
@@ -410,7 +491,7 @@ const STATUS = {
 
 function renderView(model) {
   const { detection, savings } = model;
-  const groups = [{ title: "Status", items: [statusItem(detection)] }];
+  const groups = [{ title: "Status", items: [statusItem(detection), configItem(detection), ripgrepItem(detection)] }];
   if (savings) groups.push(...savingsGroups(savings));
   return {
     groups,
@@ -423,11 +504,12 @@ function statusItem(detection) {
   const state = detection.state;
   const status = STATUS[state];
   if (job) {
+    const phase = JOB_PHASES[job.kind];
     return {
       id: "status",
-      title: job.kind === "install" ? "Installing rtk…" : job.kind === "configure" ? "Turning the hook on…" : "Turning the hook off…",
-      subtitle: job.kind === "install" ? `${detection.packageManager.display} — this can take a minute.` : "Editing ~/.claude/settings.json.",
-      badge: job.kind === "install" ? "Installing…" : "Configuring…",
+      title: phase.title,
+      subtitle: job.kind === "install" ? `${detection.packageManager.display} — this can take a minute.` : phase.subtitle,
+      badge: phase.badge,
       badgeTone: "info",
     };
   }
@@ -441,6 +523,8 @@ function statusItem(detection) {
   };
 }
 
+/** Setup already ran by itself when these show (or could not), so the
+ *  words point at the retry, not at a first step. */
 function subtitleFor(detection) {
   switch (detection.state) {
     case "active":
@@ -460,6 +544,30 @@ function subtitleFor(detection) {
     default:
       return "";
   }
+}
+
+function configItem(detection) {
+  return {
+    id: "config",
+    title: "rtk config",
+    subtitle: detection.configPresent
+      ? "Click to see it. Exclusions and other knobs live here."
+      : "Created on setup with commented defaults.",
+    badge: detection.configPresent ? "Present" : "Missing",
+    badgeTone: detection.configPresent ? "success" : "neutral",
+  };
+}
+
+function ripgrepItem(detection) {
+  return {
+    id: "ripgrep",
+    title: "ripgrep",
+    subtitle: detection.ripgrep
+      ? "Found. rtk's grep and find filters use it."
+      : "Not on Mota's PATH. Installed on setup where a package manager exists; rtk works without it.",
+    badge: detection.ripgrep ? "Found" : "Missing",
+    badgeTone: detection.ripgrep ? "success" : "neutral",
+  };
 }
 
 function emptyTextFor(detection) {
@@ -572,6 +680,8 @@ function trim1(value) {
 
 function detailOf(id, model) {
   if (id === "status") return statusDetail(model.detection);
+  if (id === "config") return configDetail(model.detection);
+  if (id === "ripgrep") return ripgrepDetail(model.detection);
   const savings = model.savings || {};
   if (id.startsWith("all:") && savings.all) return savingsDetail("All projects", savings.all);
   if (id.startsWith("project:") && savings.project) {
@@ -631,6 +741,48 @@ function statusDetail(detection) {
   };
 }
 
+function configDetail(detection) {
+  let contents = "";
+  if (detection.configPresent) {
+    try {
+      contents = fs.readFileSync(detection.configPath, "utf8");
+    } catch (e) {
+      contents = `(could not read it: ${e.message})`;
+    }
+  }
+  const body = [
+    "rtk reads this file on every command, so an edit applies to the next one. Nothing overwrites it; setup only writes it when it is missing.",
+    detection.configPresent
+      ? `**Current contents**\n\n\`\`\`toml\n${contents.trim()}\n\`\`\``
+      : `**What setup writes**\n\n\`\`\`toml\n${DEFAULT_CONFIG_TOML.trim()}\n\`\`\``,
+    "**Most useful knob.** `[hooks] exclude_commands` — commands the Claude hook must leave alone, e.g. `[\"git push\", \"curl\"]`. For a single command, prefix it with `RTK_DISABLED=1` instead.",
+  ];
+  return {
+    title: "rtk config",
+    subtitle: detection.configPresent ? "Present" : "Missing",
+    fields: [{ label: "Path", value: detection.configPath }],
+    body: body.join("\n\n"),
+    url: CONFIG_REFERENCE_URL,
+  };
+}
+
+function ripgrepDetail(detection) {
+  const pm = detection.packageManager;
+  const install = pm && pm.ripgrepDisplay ? pm.ripgrepDisplay : IS_WINDOWS ? "winget install --id BurntSushi.ripgrep.MSVC -e" : IS_MAC ? "brew install ripgrep" : "your distribution's ripgrep package";
+  return {
+    title: "ripgrep",
+    subtitle: detection.ripgrep ? "Found" : "Missing",
+    fields: [{ label: "On Mota's PATH", value: detection.ripgrep ? "Yes" : "No" }],
+    body: [
+      "Some rtk filters (grep, find, read) shell out to ripgrep (`rg`). Without it rtk still works and prints a one-line warning on those commands.",
+      detection.ripgrep
+        ? "Nothing to do."
+        : `Setup installs it when a package manager is available. By hand:\n\n\`\`\`\n${install}\n\`\`\`\n\nLike rtk itself, a fresh install is only seen by Mota after a restart.`,
+    ].join("\n\n"),
+    url: "https://github.com/BurntSushi/ripgrep",
+  };
+}
+
 function manualCommands(detection) {
   const install = IS_WINDOWS
     ? ["winget install --id rtk-ai.rtk -e", "scoop install rtk"]
@@ -668,14 +820,14 @@ function rtkConfigPath() {
  * `panels/refresh` tells the host when to ask again. A press while a
  * job runs just re-renders the interim view.
  */
-async function startJob(kind, context) {
-  if (job) return renderView(lastModel || { detection: await detect(), savings: null, context });
+async function startJob(kind, context, known) {
+  if (job) return renderView(lastModel || { detection: known || (await detect()), savings: null, context });
   // Claimed before the first await: two presses in the same host batch
   // would otherwise both pass the check above and race two installs.
   job = { kind: kind === "enable" ? "install" : "remove" };
   lastError = "";
-  const detection = await detect();
-  if (kind === "enable" && detection.rtkPath) job.kind = "configure";
+  const detection = known || (await detect());
+  if (kind === "enable" && detection.rtkPath) job.kind = detection.hook.present ? "extras" : "configure";
   const model = { detection, savings: null, context };
   lastModel = model;
   runJob(kind, detection)
@@ -709,8 +861,38 @@ async function runJob(kind, detection) {
       throw new Error(`${pm.name} finished but rtk was not found. Restart Mota and try again.`);
     }
   }
-  log(`turning the hook on with ${rtkPath}`);
-  await must(rtkPath, ["init", "-g", "--auto-patch", "--hook-only"], INIT_TIMEOUT_MS);
+  if (!detection.hook.present) {
+    job.kind = "configure";
+    log(`turning the hook on with ${rtkPath}`);
+    await must(rtkPath, ["init", "-g", "--auto-patch", "--hook-only"], INIT_TIMEOUT_MS);
+  }
+  // The extras never fail setup: rtk is on by this point, and the status
+  // rows say what is still missing.
+  job.kind = "extras";
+  ensureConfig(detection.configPath);
+  await ensureRipgrep(detection);
+}
+
+/** rtk's config, only if there is none — with comments, so the knobs a
+ *  user might want are named where they will look for them. `wx` makes
+ *  the "only if none" atomic: an existing file is never touched. */
+function ensureConfig(configPath) {
+  try {
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, DEFAULT_CONFIG_TOML, { flag: "wx" });
+    log(`wrote ${configPath}`);
+  } catch (e) {
+    if (e.code !== "EEXIST") log(`could not write ${configPath}: ${e.message}`);
+  }
+}
+
+async function ensureRipgrep(detection) {
+  if (detection.ripgrep) return;
+  const pm = detection.packageManager;
+  if (!pm || !pm.ripgrepArgs) return;
+  log(`installing ripgrep: ${pm.ripgrepDisplay}`);
+  const result = await run(pm.command, pm.ripgrepArgs, { timeoutMs: INSTALL_TIMEOUT_MS });
+  if (result.code !== 0) log(`ripgrep install failed (rtk still works): ${result.error || firstLine(result.stderr)}`);
 }
 
 /** Runs and throws with the output tail on anything but exit 0. */

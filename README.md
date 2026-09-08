@@ -23,7 +23,7 @@ sidebar.
 |---|---|---|---|
 | [GitHub PRs](extensions/github-prs) | Your open pull requests in the sidebar, grouped by what needs you: CI failing, changes requested, running, ready to merge. Click one for the failing checks. *(setup required)* | a sidebar panel | `ui:panel` |
 | [Poteto Mode](extensions/poteto-mode) | Rigorous agent mode adapted from Cursor's pstack: /poteto-mode matches a playbook, builds a todo list, delegates by model tier, and demands evidence before reporting done. | `/poteto-mode`, `/how`, `/why`, `/architect`, `/arena`, `/interrogate`, `/tdd`, `/figure-it-out`, `/show-me-your-work`, `/unslop` | `commands:register` |
-| [Token Saver (rtk)](extensions/rtk) | Compresses the shell output your Claude sessions read with rtk, and shows how many tokens it saved. *(setup required)* | a sidebar panel | `ui:panel` |
+| [Token Saver (rtk)](extensions/rtk) | Sets up rtk for your Claude sessions on first open — install, hook, config — and shows how many tokens it saved. *(setup required)* | a sidebar panel | `ui:panel` |
 | [Standup](extensions/standup) | Drafts a standup update and pings you when it is ready. | `/standup`, `/standup-notify` | `commands:register` `notifications` |
 
 <!-- catalog:end -->

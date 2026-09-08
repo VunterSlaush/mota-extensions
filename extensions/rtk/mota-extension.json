@@ -1,12 +1,12 @@
 {
   "name": "rtk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Token Saver (rtk)",
-  "description": "Compresses the shell output your Claude sessions read with rtk, and shows how many tokens it saved.",
+  "description": "Sets up rtk for your Claude sessions on first open — install, hook, config — and shows how many tokens it saved.",
   "protocolVersion": 1,
   "entry": { "command": "node", "args": ["./main.cjs"] },
   "permissions": ["ui:panel"],
   "contributes": {
-    "panels": [{ "id": "savings", "title": "Token Saver", "icon": "coins" }]
+    "panels": [{ "id": "savings", "title": "Token Saver (rtk)", "icon": "./icon.svg" }]
   }
 }

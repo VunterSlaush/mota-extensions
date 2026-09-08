@@ -45,8 +45,8 @@
     {
       "id": "rtk",
       "displayName": "Token Saver (rtk)",
-      "description": "Compresses the shell output your Claude sessions read with rtk, and shows how many tokens it saved.",
-      "version": "0.1.0",
+      "description": "Sets up rtk for your Claude sessions on first open — install, hook, config — and shows how many tokens it saved.",
+      "version": "0.2.0",
       "author": { "name": "Jesus Mota", "github": "VunterSlaush" },
       "license": "MIT",
       "keywords": ["tokens", "claude", "shell", "savings", "panel"],
@@ -54,7 +54,7 @@
       "commands": [],
       "panels": ["savings"],
       "runtime": "node",
-      "setup": "Nothing. Press Enable in the panel; it installs rtk with winget/brew if needed and turns the Claude hook on. Restart Mota once after a fresh install.",
+      "setup": "Nothing. Opening the panel installs rtk (winget/scoop/brew) if missing, turns the Claude hook on, writes a commented rtk config if none exists, and installs ripgrep. Restart Mota once after a fresh install.",
       "source": { "kind": "path", "path": "extensions/rtk" }
     },
     {
